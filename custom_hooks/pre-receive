@@ -1,0 +1,45 @@
+#!/opt/gitlab/embedded/bin/ruby
+# Fix the PATH so that gitlab-shell can find git-upload-pack and friends.
+ENV['PATH'] = '/opt/gitlab/bin:/opt/gitlab/embedded/bin:' + ENV['PATH']
+
+##!/usr/bin/env ruby
+
+# Obligation respecter le format de commit comme suit:
+#
+#[???] Message
+#
+#Message de commit sur une 
+#ou plusieurs lignes
+#
+#avec ref non obligatoire
+PATTERN = /\[(FIX|FEATURE|CONF|TEST|DOC)\] [A-Z][^\n]+\n\s*\n[A-Z].+/
+
+# get parameters
+refs = ARGF.read
+refs = refs.split(" ")
+# last commit hash accepted
+old = refs[0]
+# new commit hash
+new = refs[1]
+
+key_id = ENV['GL_ID']
+repo_path = Dir.pwd
+
+# list new commit hashes
+hashes = %x[ git log --format=%h #{ old }...#{ new } ].split(/\n/)
+
+check = true
+
+hashes.each do |hash|
+    # get formatted commit message
+    message = %x[ git log -n1 --format=%B #{ hash } ]
+    # check message format
+    if !(message =~ PATTERN)
+    	$stderr << "#{ hash }: Commit message does not respect GuideLines :(\n"
+    	check = false
+    end
+end
+
+# KO at first issue but check all commits
+exit 1 if !check
+
